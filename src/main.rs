@@ -1,13 +1,15 @@
+// TODO remove later
+#[allow(dead_code)]
+mod md;
+mod tui;
+mod utils;
+
 use clap::{Arg, ArgAction, Command};
 use flexi_logger::{detailed_format, Duplicate, FileSpec, Logger};
 use log::error;
 use owo_colors::colored::*;
 
-use std::{
-    fs, io,
-    path::{Path, PathBuf},
-    process,
-};
+use std::process;
 
 fn main() {
     // handle Ctrl+C
@@ -18,7 +20,7 @@ fn main() {
     .expect("Error setting Ctrl-C handler");
 
     // get config dir
-    let config_dir = check_create_config_dir().unwrap_or_else(|err| {
+    let config_dir = utils::check_create_config_dir().unwrap_or_else(|err| {
         error!("Unable to find or create a config directory: {err}");
         process::exit(1);
     });
@@ -39,10 +41,9 @@ fn main() {
 
     // handle arguments
     let matches = knb().get_matches();
-    // let parallel_flag = matches.get_flag("parallel");
 
     if let Some(_) = matches.subcommand_matches("log") {
-        if let Ok(logs) = show_log_file(&config_dir) {
+        if let Ok(logs) = utils::show_log_file(&config_dir) {
             println!("{}", "Available logs:".bold().yellow());
             println!("{}", logs);
         } else {
@@ -52,11 +53,15 @@ fn main() {
     } else if let Some(_) = matches.subcommand_matches("examples") {
         examples();
     } else {
-        if let Some(pattern) = matches.get_one::<String>("arg") {
+        if let Some(path) = matches.get_one::<String>("path") {
             todo!();
         } else {
-            let _ = knb().print_help();
-            process::exit(0);
+            tui::tui().unwrap_or_else(|err| {
+                error!("Unable to create the tui: {err}");
+                process::exit(0);
+            });
+            // let _ = knb().print_help();
+            // process::exit(0);
         }
     }
 }
@@ -81,10 +86,10 @@ fn knb() -> Command {
         .version("1.0.0")
         .author("Leann Phydon <leann.phydon@gmail.com>")
         .arg(
-            Arg::new("arg")
-                .help("Enter the arg")
+            Arg::new("path")
+                .help("Enter the path to the knowledge base")
                 .action(ArgAction::Set)
-                .value_name("ARG"),
+                .value_name("PATH"),
         )
         .subcommand(
             Command::new("examples")
@@ -115,47 +120,9 @@ todo
     );
 }
 
-fn check_create_config_dir() -> io::Result<PathBuf> {
-    let mut new_dir = PathBuf::new();
-    match dirs::config_dir() {
-        Some(config_dir) => {
-            new_dir.push(config_dir);
-            new_dir.push("knb");
-            if !new_dir.as_path().exists() {
-                fs::create_dir(&new_dir)?;
-            }
-        }
-        None => {
-            error!("Unable to find config directory");
-        }
-    }
-
-    Ok(new_dir)
-}
-
-fn show_log_file(config_dir: &PathBuf) -> io::Result<String> {
-    let log_path = Path::new(&config_dir).join("knb.log");
-    return match log_path.try_exists()? {
-        true => Ok(format!(
-            "{} {}\n{}",
-            "Log location:".italic().dimmed(),
-            &log_path.display(),
-            fs::read_to_string(&log_path)?
-        )),
-        false => Ok(format!(
-            "{} {}",
-            "No log file found:"
-                .truecolor(250, 0, 104)
-                .bold()
-                .to_string(),
-            log_path.display()
-        )),
-    };
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     #[test]
     fn test() {
