@@ -4,7 +4,7 @@ pub fn md() -> Result<()> {
     todo!();
 }
 
-fn read_md(path: &str) -> Result<()> {
+fn read_md(path: &str) -> Result<String> {
     todo!();
 }
 
